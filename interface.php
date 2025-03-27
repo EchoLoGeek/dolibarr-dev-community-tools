@@ -64,7 +64,7 @@ $db->close();    // Close $db database opened handler
 function __getTranslationFromDeeplAPI(){
 	global $conf, $jsonResponse;
 
-	if(empty($conf->global->DEVCOMMUNITYTOOLS_DEEPL_API_KEY)){
+	if(!getDolGlobalString(DEVCOMMUNITYTOOLS_DEEPL_API_KEY) && !defined('DEVCOMMUNITYTOOLS_DEEPL_API_KEY')){
 		$jsonResponse->msg = 'DeepL API Key missing';
 		return false;
 	}
@@ -86,26 +86,43 @@ function __getTranslationFromDeeplAPI(){
 		$url = 'https://api.deepl.com';
 	}
 
-	$postRequest = array(
-		'text' => $data['sourceTxt'],
-		'target_lang' =>  $data['langDest'],
-		'auth_key' => $conf->global->DEVCOMMUNITYTOOLS_DEEPL_API_KEY
-	);
-
+	$postRequest = new stdClass();
+	$postRequest->text = is_array($data['sourceTxt']) ? $data['sourceTxt'] : [ $data['sourceTxt'] ] ;
+	$postRequest->target_lang = $data['langDest'];
+	$postRequest->preserve_formatting = true;
 	if(!empty($data['langSrc'])){
-		$postRequest['source_lang'] = $data['langSrc'];
+		$postRequest->source_lang = $data['langSrc'];
+	}
+
+	// See https://developers.deepl.com/docs/xml-and-html-handling/html
+	if(!empty($data['tag_handling'])){
+		$postRequest->tag_handling = $data['tag_handling'];
+	}
+
+	if(empty($data['tag_handling'])){
+		$isHtml = false;
+		foreach ($postRequest->text as $checkText){
+			if(dol_textishtml($checkText)){
+				$isHtml = true;
+				break;
+			}
+		}
+		if($isHtml) {
+			$postRequest->tag_handling = 'html';
+		}
 	}
 
 	$ch = curl_init();
 
 	curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-		'Content-Type: application/x-www-form-urlencoded',
+		'Content-Type: application/json',
+		'Authorization: DeepL-Auth-Key '. getDolGlobalString('DEVCOMMUNITYTOOLS_DEEPL_API_KEY', defined('DEVCOMMUNITYTOOLS_DEEPL_API_KEY') ? DEVCOMMUNITYTOOLS_DEEPL_API_KEY : '')
 	));
 
 	curl_setopt($ch, CURLOPT_URL, $url.'/v2/translate');
 	curl_setopt($ch, CURLOPT_POST, 1);
-	curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($postRequest));
-	$jsonResponse->debug = http_build_query($postRequest);
+	curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($postRequest));
+	$jsonResponse->debug = $postRequest;
 
 	// Receive server response ...
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
