@@ -80,6 +80,11 @@ if($module) {
 				}
 
 				foreach ($translationFiles as $translationFileName => $translations){
+
+					if(!isset($langsStats[$langKey][$translationFileName])) {
+						$langsStats[$langKey][$translationFileName] = new stdClass();
+					}
+
 					$langsStats[$langKey][$translationFileName]->fileExist = true;
 					$langsStats[$langKey][$translationFileName]->missingTranslations = 0;
 
@@ -241,7 +246,7 @@ function __display_add_missing_tranlations_form(){
 		print '		<label class="dev-tool-lang-label" for="trad_'.$tradKeyEspaced.'" >'.$targetFlag.' '.$tradKey.'</label>';
 
 
-		if(getDolGlobalString(DEVCOMMUNITYTOOLS_DEEPL_API_KEY) || defined('DEVCOMMUNITYTOOLS_DEEPL_API_KEY')){
+		if(getDolGlobalString('DEVCOMMUNITYTOOLS_DEEPL_API_KEY') || defined('DEVCOMMUNITYTOOLS_DEEPL_API_KEY')){
 			print ' <button href="" class="generate-translation-btn" '
 				.' data-language-code-src="'.strtoupper(\devCommunityTools\ModuleLangFileManager::getLangCode($currentLang)).'" '
 				.' data-language-code-dest="'.strtoupper(\devCommunityTools\ModuleLangFileManager::getLangCode($targetLang)).'" '
